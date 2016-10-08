@@ -7,8 +7,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.widget.Toast;
 
 public class SMSDataHelper extends SQLiteOpenHelper {
+	public static String TABLENAME="MySMS";
 public static final String CREATE_BOOK = "create table MySMS ("
-+ "id integer primary key autoincrement, "
++ "_id integer primary key autoincrement, "
 + "number text)";
 private Context mContext;
 public SMSDataHelper(Context context, String name, CursorFactory

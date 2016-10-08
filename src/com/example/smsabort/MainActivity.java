@@ -3,10 +3,13 @@ package com.example.smsabort;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -18,12 +21,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.Toast;
 
 
 public class MainActivity extends Activity {
-	Button APPOS_BT,AbortSMS;
+	//Button APPOS_BT,AbortSMS;
+	Button addSMSNumberButton;
+	ListView listView;
+	Cursor cursor;
+	SMSDataHelper mySmsDataHelper;
 	ContentObserver mObserver;
+	SQLiteDatabase db;
 	Handler handler=new Handler();
 	Runnable runnable =new Runnable() {
 		
@@ -39,6 +48,19 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mySmsDataHelper=new SMSDataHelper(MainActivity.this, "MYSMS", null, 1);
+        
+        ContentValues values = new ContentValues();
+     // 开始组装第一条数据
+     values.put("number", "1223333");
+    // values.put("author", "Dan Brown");
+    // values.put("pages", 454);
+    // values.put("price", 16.96);
+     db=mySmsDataHelper.getWritableDatabase();
+     db.insert("MYSMS", null, values); // 插入第一条数据
+
+        addSMSNumberButton=(Button)findViewById(R.id.title);
+        listView=(ListView)findViewById(R.id.listview);
         
 	//	 mAudioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
 		 //mAudioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
@@ -76,6 +98,11 @@ public class MainActivity extends Activity {
 	        };  
 	  
 	        getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mObserver);  
+	        cursor=db.query("MYSMS", null, null,null, null, null, null);
+	        if (cursor!=null) {
+	        	 listView.setAdapter(new MyCursorAdapter(MainActivity.this, cursor) );
+			}
+	       
        /* APPOS_BT=(Button)findViewById(R.id.AppOS_BT);
         AbortSMS=(Button)findViewById(R.id.Start_AbortSMS);
         AbortSMS.setOnClickListener(new OnClickListener() {

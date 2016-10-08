@@ -1,24 +1,92 @@
 package com.example.smsabort;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
+import android.database.ContentObserver;
+import android.database.Cursor;
+import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceActivity;
+import android.provider.Telephony.Sms;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.Toast;
 
 
 public class MainActivity extends Activity {
-	Button APPOS_BT;
-
+	Button APPOS_BT,AbortSMS;
+	ContentObserver mObserver;
+	Handler handler=new Handler();
+	Runnable runnable =new Runnable() {
+		
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			  AudioManager mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+              mAudioManager.setRingerMode(2);
+              Toast.makeText(MainActivity.this, ";;;", Toast.LENGTH_SHORT).show();
+		}
+	};
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        APPOS_BT=(Button)findViewById(R.id.AppOS_BT);
+        
+	//	 mAudioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+		 //mAudioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+       mObserver = new ContentObserver(new Handler()) {  
+			  
+	        @SuppressLint("NewApi")
+			@Override  
+	        public void onChange(boolean selfChange) {  
+	            super.onChange(selfChange);  
+	            ContentResolver resolver = getContentResolver();  
+	            Cursor cursor = resolver.query(Uri.parse("content://sms/inbox"), new String[] { "_id", "address", "body" }, null, null, "_id desc");  
+	            long id = -1;  
+	  
+	            if (cursor.getCount() > 0 && cursor.moveToFirst()) {  
+	                id = cursor.getLong(0);  
+	                String address = cursor.getString(1);  
+	                String body = cursor.getString(2);  
+	                Toast.makeText(MainActivity.this, address, Toast.LENGTH_SHORT).show();
+	                if(address.equals("+8618683997406"))
+	                	handler.postDelayed(runnable, 10000);
+	                else {
+						handler.post(runnable);
+					}
+	                Toast.makeText(MainActivity.this, String.format("address: %s\n body: %s", address, body), Toast.LENGTH_SHORT).show();  
+	            }  
+	            cursor.close();  
+	  
+	            if (id != -1) {  
+	                int count = resolver.delete(Sms.CONTENT_URI, "_id=" + id, null);  
+	               // Toast.makeText(MainActivity.this, count == 1 ? "删除成功" : "删除失败", Toast.LENGTH_SHORT).show();  
+	             //handler.postDelayed(runnable, 10000);
+	            }  
+	        }  
+	  
+	        };  
+	  
+	        getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mObserver);  
+       /* APPOS_BT=(Button)findViewById(R.id.AppOS_BT);
+        AbortSMS=(Button)findViewById(R.id.Start_AbortSMS);
+        AbortSMS.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				
+
+			}
+		});
         APPOS_BT.setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -36,7 +104,7 @@ public class MainActivity extends Activity {
 				         startActivity(intent);	
 				         finish();
 			}
-		});
+		});*/
        // <span style="white-space:pre">  </span>
         /*Intent intent = new Intent(Intent.ACTION_MAIN);  
         ComponentName cn = new ComponentName("com.android.settings", "com.android.settings.Settings");  

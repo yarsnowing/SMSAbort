@@ -16,8 +16,10 @@ public class MySMSReceiver extends BroadcastReceiver{
 		context.startService(intent2);
 	//	Toast.makeText(context, "收到短信", Toast.LENGTH_SHORT).show();
 		AudioManager mAudioManager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+		MyService.DE_RING_STATUS=mAudioManager.getRingerMode();
+		//Log.i("ss", MyService.DE_RING_STATUS+"ddd");
         mAudioManager.setRingerMode(0);
-       // Log.i("Myservice","执行陈功");
+     // Log.i("Myservice","执行陈功");
 		 abortBroadcast();
 		
 	}

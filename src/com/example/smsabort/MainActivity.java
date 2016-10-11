@@ -7,6 +7,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -21,6 +22,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
+import android.view.Window;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.Button;
 import android.widget.EditText;
@@ -35,73 +37,24 @@ public class MainActivity extends Activity {
 	Cursor cursor;
 	SMSDataHelper mySmsDataHelper;
 	ContentObserver mObserver;
-	SQLiteDatabase db;
+	static SQLiteDatabase db;
 	MyCursorAdapter cursorAdapter;
-	Handler handler=new Handler();
-	Runnable runnable =new Runnable() {
-		
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-			  AudioManager mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-              mAudioManager.setRingerMode(2);
-              Toast.makeText(MainActivity.this, ";;;", Toast.LENGTH_SHORT).show();
-		}
-	};
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main);
         mySmsDataHelper=new SMSDataHelper(MainActivity.this, "MYSMS", null, 1);
-        
-      //  ContentValues values = new ContentValues();
-     // 寮�缁勮绗竴鏉℃暟鎹�
-     //values.put("number", "1223333");
-    // values.put("author", "Dan Brown");
-    // values.put("pages", 454);
-    // values.put("price", 16.96);
+   
      db=mySmsDataHelper.getWritableDatabase();
-     //db.insert("MYSMS", null, values); // 鎻掑叆绗竴鏉℃暟鎹�
+
 
         addSMSNumberButton=(Button)findViewById(R.id.title);
         listView=(ListView)findViewById(R.id.listview);
         
-	//	 mAudioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
-		 //mAudioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
-       mObserver = new ContentObserver(new Handler()) {  
-			  
-	        @SuppressLint("NewApi")
-			@Override  
-	        public void onChange(boolean selfChange) {  
-	            super.onChange(selfChange);  
-	            ContentResolver resolver = getContentResolver();  
-	            Cursor cursor = resolver.query(Uri.parse("content://sms/inbox"), new String[] { "_id", "address", "body" }, null, null, "_id desc");  
-	            long id = -1;  
-	  
-	            if (cursor.getCount() > 0 && cursor.moveToFirst()) {  
-	                id = cursor.getLong(0);  
-	                String address = cursor.getString(1);  
-	                String body = cursor.getString(2);  
-	                Toast.makeText(MainActivity.this, address, Toast.LENGTH_SHORT).show();
-	                if(address.equals("+8618683997406"))
-	                	handler.postDelayed(runnable, 10000);
-	                else {
-						handler.post(runnable);
-					}
-	                Toast.makeText(MainActivity.this, String.format("address: %s\n body: %s", address, body), Toast.LENGTH_SHORT).show();  
-	            }  
-	            cursor.close();  
-	  
-	            if (id != -1) {  
-	                int count = resolver.delete(Sms.CONTENT_URI, "_id=" + id, null);  
-	               // Toast.makeText(MainActivity.this, count == 1 ? "鍒犻櫎鎴愬姛" : "鍒犻櫎澶辫触", Toast.LENGTH_SHORT).show();  
-	             //handler.postDelayed(runnable, 10000);
-	            }  
-	        }  
-	  
-	        };  
-	  
-	        getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mObserver);  
+
+ 
 	        cursor=db.query(SMSDataHelper.TABLENAME, null, null,null, null, null, null);
 	        if (cursor!=null) {
 	        	cursorAdapter=new MyCursorAdapter(MainActivity.this,cursor);
@@ -109,6 +62,8 @@ public class MainActivity extends Activity {
 			}
 	       
 	        initListener();
+	        Intent intent =new Intent(MainActivity.this,MyService.class);
+	        startService(intent);
     }
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v,
@@ -123,16 +78,14 @@ public class MainActivity extends Activity {
     
     	AdapterContextMenuInfo info=(AdapterContextMenuInfo)item.getMenuInfo();
     	int position =info.position;
-    	Log.i("MainActivity", "position is"+position);
-    	//CrimeAdapter adapter=(C)getListAdapter();
-    //	Crime crime=adapter.getItem(position);
+    	
     	switch (item.getItemId()) {
     	case R.id.delete_sms:
-    		db.delete(SMSDataHelper.TABLENAME, "_id = ?", new String[]{position+""});
-    		db.close();
-    		//CrimeLab.get(getActivity()).deleteCrime(crime);
-    		//adapter.notifyDataSetChanged();
+    		cursor.moveToPosition(position);
+    		String num=cursor.getString(cursor.getColumnIndex("number"));
+    		db.delete(SMSDataHelper.TABLENAME, "number = ?", new String[]{num});
     		cursor.requery();
+    		querySMS();
     		return true;
 		
 		}
@@ -157,7 +110,7 @@ public class MainActivity extends Activity {
         final EditText editText = new EditText(MainActivity.this);
         AlertDialog.Builder inputDialog = 
             new AlertDialog.Builder(MainActivity.this);
-        inputDialog.setTitle("我是一个输入Dialog").setView(editText);
+        inputDialog.setTitle("输入号码(区号也要输入上)").setView(editText);
         inputDialog.setPositiveButton("确定", 
             new DialogInterface.OnClickListener() {
             @Override
@@ -165,14 +118,29 @@ public class MainActivity extends Activity {
             	ContentValues values = new ContentValues();
             	// 开始组装第一条数据
             	values.put("number", editText.getText().toString());
-            	//values.put("author", "Dan Brown");
-            	//values.put("pages", 454);
-            	//values.put("price", 16.96);
+            	
             	db.insert(SMSDataHelper.TABLENAME, null, values); // 插入第一条数据
-            	//cursorAdapter.notifyDataSetChanged();
+            	
             cursor.requery();
+            querySMS();
             }
         }).show();
         
     }
+	public static void querySMS(){
+		Cursor cursor=db.query(SMSDataHelper.TABLENAME, null, null,null, null, null, null);
+		MyService.numberStrings.clear();
+		if (cursor.moveToFirst()) {
+			
+			do {
+			// 遍历Cursor对象，取出数据并打印
+			String smsnum = cursor.getString(cursor.
+			getColumnIndex("number"));
+			MyService.numberStrings.add(smsnum);
+			} while (cursor.moveToNext());
+			}
+			cursor.close();
+			Log.i("size----", MyService.numberStrings.size()+"  sizr");
+			
+		}
 }
